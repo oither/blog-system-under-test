@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <title>Blog Test System</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .hidden { display: none; }
+        input, textarea, button { margin: 5px 0; padding: 8px; width: 100%; box-sizing: border-box; }
+        button { cursor: pointer; background: #4CAF50; color: white; border: none; }
+        .article-item { border: 1px solid #ddd; padding: 10px; margin: 10px 0; }
+        #message { color: red; margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>📝 Blog System Under Test</h1>
+    <div id="message"></div>
+
+    <!-- 登录区 -->
+    <div id="login-section">
+        <h2>Login</h2>
+        <input id="username" placeholder="Username" />
+        <input id="password" type="password" placeholder="Password" />
+        <button onclick="login()">Login</button>
+        <p>No account? Register via <a href="/docs" target="_blank">Swagger UI</a></p>
+    </div>
+
+    <!-- 文章区（登录后显示） -->
+    <div id="app-section" class="hidden">
+        <button onclick="logout()" style="background:#f44336;width:auto;">Logout</button>
+        <h2>Create Article</h2>
+        <input id="new-title" placeholder="Title" />
+        <textarea id="new-content" placeholder="Content" rows="3"></textarea>
+        <button onclick="createArticle()">Publish</button>
+
+        <h2>Articles</h2>
+        <input id="search" placeholder="Search by title..." onkeyup="loadArticles()" />
+        <div id="articles-list"></div>
+    </div>
+
+<script>
+const API = '';
+let token = localStorage.getItem('token');
+
+if (token) showApp();
+
+async function login() {
+    const res = await fetch(`${API}/auth/login`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            username: document.getElementById('username').value,
+            password: document.getElementById('password').value
+        })
+    });
+    const data = await res.json();
+    if (res.ok) {
+        token = data.access_token;
+        localStorage.setItem('token', token);
+        showApp();
+    } else {
+        showMessage(data.detail || 'Login failed');
+    }
+}
+
+function logout() {
+    token = null;
+    localStorage.removeItem('token');
+    location.reload();
+}
+
+function showApp() {
+    document.getElementById('login-section').classList.add('hidden');
+    document.getElementById('app-section').classList.remove('hidden');
+    loadArticles();
+}
+
+async function loadArticles() {
+    const search = document.getElementById('search').value;
+    const url = `${API}/articles?limit=20${search ? '&search=' + encodeURIComponent(search) : ''}`;
+    const res = await fetch(url);
+    const articles = await res.json();
+    const container = document.getElementById('articles-list');
+    container.innerHTML = articles.map(a => `
+        <div class="article-item">
+            <strong>${a.title}</strong> <small>(ID: ${a.id})</small>
+            <p>${a.content.substring(0, 100)}</p>
+            <button style="width:auto;" onclick="deleteArticle(${a.id})">Delete</button>
+        </div>
+    `).join('');
+}
+
+async function createArticle() {
+    const res = await fetch(`${API}/articles`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`},
+        body: JSON.stringify({
+            title: document.getElementById('new-title').value,
+            content: document.getElementById('new-content').value
+        })
+    });
+    if (res.ok) { loadArticles(); showMessage('Article created!', false); }
+    else { const d = await res.json(); showMessage(d.detail); }
+}
+
+async function deleteArticle(id) {
+    const res = await fetch(`${API}/articles/${id}`, {
+        method: 'DELETE',
+        headers: {'Authorization': `Bearer ${token}`}
+    });
+    if (res.ok) loadArticles();
+    else { const d = await res.json(); showMessage(d.detail); }
+}
+
+function showMessage(msg, isError = true) {
+    const el = document.getElementById('message');
+    el.textContent = msg;
+    el.style.color = isError ? 'red' : 'green';
+    setTimeout(() => el.textContent = '', 3000);
+}
+</script>
+</body>
+</html>
