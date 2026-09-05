@@ -14,8 +14,8 @@ templates = Jinja2Templates(directory="templates")
 # 注册 API 路由
 app.include_router(auth.router)
 app.include_router(users.router)
-app.include_router(articles.router)   # Day2 取消注释
-app.include_router(comments.router)   # Day3 取消注释
+app.include_router(articles.router)   
+app.include_router(comments.router)   
 
 
 @app.get("/")

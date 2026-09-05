@@ -41,7 +41,10 @@ def delete_comment(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    comment = db.query(Comment).filter(Comment.id == comment_id).first()
+    comment = db.query(Comment).filter(
+        Comment.id == comment_id,
+        Comment.article_id == article_id
+    ).first()
     if not comment:
         raise HTTPException(status_code=404, detail="Comment not found")
     if comment.user_id != current_user.id:
